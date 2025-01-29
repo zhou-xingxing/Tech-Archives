@@ -36,7 +36,7 @@ ssh-copy-id root@slaveNode_address
 https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html
 - /etc/ansible/hosts：适用于全局的 Ansible 设置，通常由系统管理员维护，默认会被 Ansible 读取
 - inventory.ini：适用于特定项目，存放在项目目录中，方便携带、调整和版本管理，优先级高于默认配置。可以是ini格式也可以是yaml格式
-![[attachments/Pasted image 20250126163344.png]]
+![图片](attachments/Pasted_image_20250126163344.png)
 ### playbook
 
 | 概念        | 说明                                             |

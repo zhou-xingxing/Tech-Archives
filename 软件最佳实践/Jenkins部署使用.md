@@ -47,7 +47,7 @@ cat /var/lib/jenkins/secrets/initialAdminPassword
 - Jenkinsfile可参考官方文档入门： https://www.jenkins.io/zh/doc/pipeline/tour/hello-world/
 - Jenkinsfile可使用vscode插件进行验证，可参考： https://juejin.cn/post/7193910998279913530
 ### Jenkinsfile Demo
-![[attachments/Pasted image 20250125174857.png]]
+![图片](attachments/Pasted_image_20250125174857.png)
 ```groovy
 pipeline {
     agent any  // 在任何可用的 Jenkins 节点上运行
@@ -148,7 +148,7 @@ pipeline {
 ## Plugins
 ### 邮件通知
 - Jenkins内置了邮件通知功能，同时也有邮件扩展插件（emailext），后者支持定制更复杂的邮件内容
-![[attachments/Pasted image 20250124153243.png]]
+![[attachments/Pasted_image_20250124153243.png]]
 - 在Manage Jenkins-->System里配置邮件服务器地址和认证信息等，可参考： https://www.cnblogs.com/zhijiyiyu/p/15903546.html
 ### Webhook触发器
 - 需要安装插件：Generic Webhook Trigger

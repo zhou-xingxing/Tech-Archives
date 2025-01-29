@@ -43,4 +43,4 @@ SQLite数据源插件
 grafana-cli --pluginUrl https://github.com/fr-ser/grafana-sqlite-datasource/releases/download/v3.5.0/frser-sqlite-datasource-3.5.0.zip plugins install frser-sqlite-datasource
 ```
 注意时间列要么是时间戳数字，要么是符合**RFC3339**标准的时间字符串
-![[attachments/Pasted image 20241231013732.png]]
+![图片](attachments/Pasted_image_20241231013732.png)

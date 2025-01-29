@@ -1,6 +1,7 @@
 # 显卡基本结构
+
 【【硬核科普】从零开始认识显卡】 https://www.bilibili.com/video/BV1xE421j7Uv/?share_source=copy_web&vd_source=8696b0300d8768b6657ac38806aa5330
-![[attachments/Pasted image 20241210215615.png]]
+![图片](attachments/Pasted_image_20241210215615.png)
 - 显卡由电路板和散热模组组成
 - 显卡电路板可认为由四个部分组成：GPU、显存、供电模块、接口
 - 接口包括视频接口和PCIE接口
