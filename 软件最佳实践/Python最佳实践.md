@@ -1,7 +1,7 @@
 # 多版本管理
 ## PyEnv
 https://github.com/pyenv/pyenv?tab=readme-ov-file#installation
-### 安装
+### 安装部署
 ```shell
 # macos
 brew install pyenv

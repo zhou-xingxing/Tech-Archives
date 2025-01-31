@@ -1,7 +1,7 @@
 # 参考文档
 https://www.jenkins.io/doc/book/installing/linux/#debianubuntu
 注意尽量参考官方最新文档，而不是中文文档（很有可能已失效）
-# 安装
+# 安装部署
 ```shell
 # 下载 Jenkins GPG 公钥并存储在 keyring 文件中
 sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \

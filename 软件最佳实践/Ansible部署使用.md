@@ -1,4 +1,4 @@
-# 安装
+# 安装部署
 - 以Ubuntu系统为例
 ```shell
 sudo apt update
