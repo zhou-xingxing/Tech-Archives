@@ -28,7 +28,7 @@ ssh-keygen
 ssh-copy-id root@slaveNode_address
 ```
 4. 控制节点执行`ansible all -m ping -u root`命令检测连通性是否正常
-## QuickStart
+## QuickStart Demo
 参考： https://docs.ansible.com/ansible/latest/getting_started/index.html
 ### inventory
 
@@ -38,6 +38,11 @@ https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html
 - /etc/ansible/hosts：适用于全局的 Ansible 设置，通常由系统管理员维护，默认会被 Ansible 读取
 - inventory.ini：适用于特定项目，存放在项目目录中，方便携带、调整和版本管理，优先级高于默认配置。可以是ini格式也可以是yaml格式
 ![图片](attachments/Pasted_image_20250126163344.png)
+### 远程执行shell命令
+```shell
+#对指定清单文件中的主机组执行shell命令
+ansible web_servers -i inventory.ini -m shell -a "df -h"
+```
 ### playbook
 
 | 概念        | 说明                                             |
@@ -52,8 +57,8 @@ https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html
 | Templates | 用于动态生成配置文件                                     |
 | Roles     | 结构化组织任务的方式，将任务、变量、文件、模板等组件模块化，从而提高playbook的复用性 |
 | Tags      | 选择性地执行特定任务                                     |
-#### Demo-部署并启动Nginx
-##### 文件结构
+#### 部署并启动Nginx
+##### 目录结构
 ```
 ansible_demo/  # 项目根目录
 ├── ansible.cfg         # Ansible 配置文件
@@ -157,7 +162,7 @@ inventory = inventory.ini
 </html>
 ```
 
-##### templates/nhinx.conf.j2
+##### templates/nginx.conf.j2
 
 ```nginx
 # 定义事件模块配置
@@ -185,15 +190,16 @@ http {
 }
 ```
 
-##### playbook运行前检查命令
+##### playbook相关命令
 
-| 检查内容 | 命令 | 作用 |
-|----------|------|------|
-| 语法检查 | ansible-playbook playbook.yml --syntax-check | 检查语法错误 |
-| 变量检查 | ansible-playbook playbook.yml --list-vars | 列出 Playbook 使用的变量 |
-| 主机清单检查 | ansible-playbook playbook.yml --list-hosts | 预览 Playbook 作用的主机 |
-| 任务检查 | ansible-playbook playbook.yml --list-tasks | 列出 Playbook 中的任务 |
-| 仅模拟执行 | ansible-playbook playbook.yml --check | 运行 Playbook 但不修改系统 |
-| 文件变更预览 | ansible-playbook playbook.yml --check --diff | 预览 template 或 copy 变更 |
-| 代码规范检查 | ansible-lint playbook.yml | 检查 Ansible Playbook 代码质量 |
+| 检查内容       | 命令                                           | 作用                       |
+| ---------- | -------------------------------------------- | ------------------------ |
+| 语法检查       | ansible-playbook playbook.yml --syntax-check | 检查语法错误                   |
+| 变量检查       | ansible-playbook playbook.yml --list-vars    | 列出 Playbook 使用的变量        |
+| 主机清单检查     | ansible-playbook playbook.yml --list-hosts   | 预览 Playbook 作用的主机        |
+| 任务检查       | ansible-playbook playbook.yml --list-tasks   | 列出 Playbook 中的任务         |
+| 仅模拟执行      | ansible-playbook playbook.yml --check        | 运行 Playbook 但不修改系统       |
+| 文件变更预览     | ansible-playbook playbook.yml --check --diff | 预览 template 或 copy 变更    |
+| 代码规范检查     | ansible-lint playbook.yml                    | 检查 Ansible Playbook 代码质量 |
+| 运行playbook | ansible-playbook playbook.yml                | 执行定义好的playbook           |
 
