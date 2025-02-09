@@ -1,4 +1,4 @@
-# 多版本管理
+# Python多版本管理
 ## PyEnv
 https://github.com/pyenv/pyenv?tab=readme-ov-file#installation
 ### 安装部署
@@ -39,12 +39,12 @@ export PYTHON_BUILD_MIRROR_URL_SKIP_CHECKSUM=1
 export PYTHON_BUILD_MIRROR_URL="https://mirrors.huaweicloud.com/python"
 
 ```
-## 虚拟环境
+# Python虚拟环境
 ```shell
 # 创建一个新的虚拟环境
 python3 -m venv <虚拟环境名>
 # 激活虚拟环境
-source ./bin/activate
+source venv/bin/activate
 # 退出虚拟环境
 deactivate
 # 查看当前使用的 Python 解释器路径，若虚拟环境正常激活则路径应位于venv/bin下
@@ -60,4 +60,11 @@ pip download -r requirements.txt -d ./packages
 # 根据requirements.txt从本地目录安装包
 pip install --no-index --find-links=./packages -r requirements.txt
 ```
+# Python快速搭建文件服务器
+```shell
+# 将当前目录作为文件服务器并指定端口
+python -m http.server <port> 
 
+# 客户端获取指定文件
+wget http:x.x.x.x:<port>/<文件路径>
+```
