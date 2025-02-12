@@ -39,7 +39,7 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 3. 验证
 ```shell
 systemctl status docker.service
-docker -v
+sudo docker -v
 sudo docker info
 # 注意有可能因为网络原因导致镜像拉取失败
 sudo docker run hello-world
@@ -66,7 +66,7 @@ sudo dpkg -i ./containerd.io_<version>_<arch>.deb \
 ## 配置
 Linux系统中主要配置文件位于 `/etc/docker/daemon.json`， 如果没有则新建
 ### 修改默认镜像源
-5. 在`/etc/docker/daemon.json`加入以下内容
+1. 在`/etc/docker/daemon.json`加入以下内容
 注意：很多云厂商的镜像源通常只允许其云内服务器访问
 ```json
 {
@@ -75,7 +75,18 @@ Linux系统中主要配置文件位于 `/etc/docker/daemon.json`， 如果没有
   ]
 }
 ```
-6. 执行`sudo systemctl restart docker.service`重启Docker服务
+2. 执行`sudo systemctl restart docker.service`重启Docker服务
+### 允许Docker被非root用户管理
+
+> Docker 守护进程绑定到 Unix 套接字而非 TCP 端口，默认 Unix 套接字由 root 用户拥有，其他用户需用 sudo 访问。但该Unix套接字也允许docker用户组的用户访问，所以非root用户如果想直接运行docker命令需加入docker用户组
+```shell
+sudo groupadd docker
+sudo usermod -aG docker $USER
+newgrp docker
+# 此时不用加sudo应该也能运行
+docker run hello-world
+```
+
 # 常用命令
 ## 镜像类
 ```shell
@@ -115,3 +126,7 @@ docker exec -it <容器ID或名称> /bin/bash
 - [ ]  构建一个Python应用镜像
 
 # Docker Compose
+
+
+# Docker与Jenkins联动
+
