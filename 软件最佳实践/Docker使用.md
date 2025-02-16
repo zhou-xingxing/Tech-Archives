@@ -95,6 +95,12 @@ docker pull <镜像名>:<标签>
 docker images
 # -f强制删除正在使用的镜像
 docker rmi [-f] <镜像名或ID> 
+# 根据当前容器创建镜像，-c参数用于设置容器启动时的默认执行命令
+docker container commit -m "message" [-c <命令>] <容器名> <新镜像名>
+# 查看镜像历史
+docker image history <镜像名>
+# 根据Dockerfile构建镜像
+docker build -t <镜像名:标签> <镜像构建的上下文目录>
 ```
 ## 容器类
 ```shell
@@ -120,13 +126,65 @@ docker rm [-f] <容器ID或名称>
 docker exec -it <容器ID或名称> /bin/bash
 ```
 # Dockerfile
+## Docker镜像的分层架构
+Dockerfile 中的每一行指令都会生成一个新的镜像层，Docker 会缓存每一层，这意味着如果Dockerfile 没有更改，或者构建上下文没有变化，Docker 在后续构建时会复用这些缓存的层，这样可以加速构建过程。但如果某一层发生了变化（例如，RUN 命令中更改了文件或安装了新的依赖），后续所有层都必须重新构建。
+
+为了优化镜像大小和构建速度，建议：
+- **合并多个 RUN 指令到一行，这样可以减少层数**。
+- **将经常变化的 COPY 和 ADD 放在 Dockerfile 的最后**（尤其是经常变化的源代码目录），因为每次发生变化都会导致后续所有层重新构建。
+
 ## Demo
 ### 构建一个Python应用镜像
-#todo 
-- [ ]  构建一个Python应用镜像
+构建前文件目录结构如下
+```yaml
+-- src # 要构建为镜像的源代码目录
+ -- app.py # 应用程序源代码
+ -- Dockerfile
+ -- pip.conf # pip源配置文件
+ -- requirements.txt # python依赖包
+```
+Dockerfile内容如下：
+```Dockerfile
+# 指定镜像的基础镜像，slim镜像去掉了一些不必要的操作系统工具和文件，体积更小
+FROM python:3.10-slim
+# 指定容器内的工作目录，所有接下来的 COPY、RUN、CMD 等命令都会在这个目录下执行
+WORKDIR /usr/local/app
+# 将本地文件复制到容器内工作目录
+COPY ./requirements.txt ./
+# 将本地文件复制到容器内指定目录，这里是为了配置构建镜像时使用的pip源，加快python依赖下载速度
+COPY ./pip.conf /etc/pip.conf
+# 安装python依赖，注意是在构建镜像时安装，而不是运行容器时再安装
+# 清理缓存，减小镜像体积
+RUN pip install --no-cache-dir -r requirements.txt && rm -rf /root/.cache
+
+# 把可能经常变化的源代码目录放到Dockerfile后面，使前序步骤的layer缓存可以充分利用
+COPY ./app.py ./
+# 暴露容器的5000端口
+EXPOSE 5000
+# 指定容器启动时执行的命令
+CMD ["python3", "app.py"]
+```
+
+执行镜像构建命令
+```shell
+# 在当前目录根据Dockerfile(默认)构建镜像，-t指定镜像名和标签
+docker build -t python-web-app:v1 .
+# 验证
+docker images
+# 运行容器
+docker run -d -p 80:5000 python-web-app:v1
+```
+![](attachments/Pasted%20image%2020250216133022.png)
 
 # Docker Compose
 
 
 # Docker与Jenkins联动
 
+# 问题答疑
+1. 如果Docker镜像中包含Linux操作系统，那么这个容器使用的是宿主机内核还是容器内操作系统的内核？
+答：Docker容器**始终使用宿主机的内核**，Docker镜像实际上只包含了操作系统的**用户空间**部分，比如
+	• **文件系统**：/bin, /lib, /etc等。
+	• **系统工具**：如bash, apt, yum。
+	• **运行环境**：如glibc, libstdc++等库文件。
+	• 例如，一个Ubuntu镜像实际上是Ubuntu的用户空间，包含Ubuntu的软件包管理器apt，但它**不包含内核**
