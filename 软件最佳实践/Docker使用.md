@@ -140,11 +140,11 @@ Dockerfile 中的每一行指令都会生成一个新的镜像层，Docker 会�
 ### 构建一个Python应用镜像
 构建前文件目录结构如下
 ```yaml
--- src # 要构建为镜像的源代码目录
-	 -- app.py # 应用程序源代码
-	 -- Dockerfile
-	 -- pip.conf # pip源配置文件
-	 -- requirements.txt # python依赖包
+src/ # 要构建为镜像的源代码目录
+  --> app.py # 应用程序源代码
+  --> Dockerfile
+  --> pip.conf # pip源配置文件
+  --> requirements.txt # python依赖包
 ```
 Dockerfile内容如下：
 ```Dockerfile
@@ -222,13 +222,13 @@ services:
   web1:
     restart: on-failure # 设置重启策略
     build: ./web # 指定镜像构建的上下文目录
-	hostname: 'web1' # 设置容器内主机名（非容器名）
+    hostname: 'web1' # 设置容器内主机名（非容器名）
     ports:
       - '81:5000' # 设置端口映射
   web2:
     restart: on-failure
     build: ./web
-	hostname: 'web2'
+    hostname: 'web2'
     ports:
       - '82:5000'
   nginx:
