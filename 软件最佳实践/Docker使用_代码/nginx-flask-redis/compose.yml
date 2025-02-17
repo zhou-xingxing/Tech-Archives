@@ -1,0 +1,25 @@
+# 定义服务
+services:
+  redis: # 服务（容器）名
+    image: redis # 使用官方redis镜像
+    ports:
+      - '6379:6379' # 设置端口映射
+  web1:
+    restart: on-failure # 设置重启策略
+    build: ./web # 指定镜像构建的上下文目录
+    hostname: 'web1' # 设置容器内主机名（非容器名）
+    ports:
+      - '81:5000' # 设置端口映射
+  web2:
+    restart: on-failure
+    build: ./web
+    hostname: 'web2'
+    ports:
+      - '82:5000'
+  nginx:
+    build: ./nginx
+    ports:
+    - '80:80'
+    depends_on: # 确保容器启动顺序
+    - web1
+    - web2
