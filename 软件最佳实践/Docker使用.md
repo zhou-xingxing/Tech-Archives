@@ -196,7 +196,9 @@ docker0 是宿主机上的虚拟网桥设备，它将容器网络流量与宿主
 ## Demo
 ### Nginx+Flask+Redis
 使用Nginx作为负载均衡器轮询后面两个Web应用，并使用Redis实现请求计数。
-[跳转到配套代码](../Docker使用_代码/nginx-flask-redis)
+
+[跳转到配套代码](./Docker使用_代码/nginx-flask-redis)
+
 **文件目录结构如下：**
 ```txt
 compose.yml
