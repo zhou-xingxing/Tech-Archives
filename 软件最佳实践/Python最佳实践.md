@@ -24,7 +24,7 @@ source .bashrc
 ### 使用
 ```shell
 # 查看当前已安装的python版本
-pyenv install --list
+pyenv versions
 # 安装指定版本的python
 pyenv install <version>
 # 设置全局python版本

@@ -101,6 +101,13 @@ docker container commit -m "message" [-c <命令>] <容器名> <新镜像名>
 docker image history <镜像名>
 # 根据Dockerfile构建镜像
 docker build -t <镜像名:标签> <镜像构建的上下文目录>
+
+# 查看镜像详细信息
+docker inspect <镜像ID>
+# 将镜像导出为本地文件
+docker save -o <output_file>.tar <image_name>:<tag>
+# 将本地文件加载为镜像
+docker load -i <output_file>.tar
 ```
 ## 容器类
 ```shell
@@ -193,16 +200,26 @@ docker0 是宿主机上的虚拟网桥设备，它将容器网络流量与宿主
 # Docker 持久化存储
 
 ## Bind Mounts
-将本地文件目录挂载到容器文件目录，更适合本地开发，即本地修改代码后用容器的环境运行。在实际生产环境中很少使用，因为在有容器编排调度的情况下（如k8s），容器基本不会固定运行在某个宿主机上。
+将本地文件目录挂载到容器文件目录，更适合本地开发，即本地修改代码后用容器的环境运行。在实际生产环境中很少使用，因为在有容器编排调度的情况下（如k8s），容器基本不会固定运行在某个宿主机上。而且这种方式无法避免其他程序对相同的本地文件目录做操作。
+
+Use bind mounts when you need to be able to access files from both the container and the host.
 
 ## Named Volumes
 实际大规模生产环境中更推荐使用这种，原因如下：
-- **自动化管理**：Docker 会自动管理 Volume 的生命周期，免去了手动管理宿主机目录的麻烦。数据存储位置由 Docker 内部管理，用户无需关心，也规避了其他用户或程序操作宿主机文件目录的风险。
+- **自动化管理**：Docker 会自动管理 Volume 的生命周期，免去了手动管理宿主机目录的麻烦。数据存储位置由 Docker 内部管理，用户无需关心，也规避了其他用户或程序直接操作宿主机文件系统的风险。
 - **可扩展性和灵活性**：Docker Volumes 支持使用自定义卷驱动程序，允许将数据存储在不同的后端存储中（如云存储、NFS、分布式存储等），更容易进行跨节点共享和管理。
+
+Volumes are not a good choice if you need to access the files from the host, as the volume is completely managed by Docker.
+
+- 如果将一个非空volume挂载到容器内非空文件目录，则容器内原文件会被遮挡
+- 如果将一个空volume挂载到容器内非空文件目录，则容器内原文件默认会被复制到volume，除非指定`volume-nocopy`选项
+
+Docker 支持多种 **Volume Driver**，允许用户将容器数据存储到不同存储后端（local, NFS, tmpfs）
 
 # Docker Compose
 
 - Docker Compose 会自动创建一个自定义的bridge网络，并将所有定义在 Compose 文件中的服务容器都连接到这个网络中，这使得容器之间可以通过容器名互相访问
+- 如果多次执行同一 Docker Compose 文件但Compose定义并未修改，则容器状态不会发生变化且不会被重复创建；若Compose定义已经发生了修改，则再次运行Docker Compose时容器也会进行相应更新并重启
 
 ## Demo
 ### Nginx+Flask+Redis
@@ -266,7 +283,7 @@ docker compose up -d --build
 
 # 问题答疑
 
-2. 如果Docker镜像中包含Linux操作系统，那么这个容器使用的是宿主机内核还是容器内操作系统的内核？
+1. 如果Docker镜像中包含Linux操作系统，那么这个容器使用的是宿主机内核还是容器内操作系统的内核？
 	答：Docker容器**始终使用宿主机的内核**，Docker镜像实际上只包含了操作系统的**用户空间**部分，比如
 	• **文件系统**：/bin, /lib, /etc等。
 	• **系统工具**：如bash, apt, yum。
