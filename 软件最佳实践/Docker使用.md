@@ -113,6 +113,9 @@ docker load -i <output_file>.tar
 ```shell
 docker run [参数] <镜像名>
 # docker run -d --name my-nginx -p 8080:80 -v /data:/usr/share/nginx/html nginx:alpine
+
+# 查看指定容器日志 -f代表follow 滚动更新
+docker logs -f <container_name_or_id>
 ```
 核心参数：
 - `-d`: 后台运行（detached mode）
@@ -136,6 +139,7 @@ docker rm [-f] <容器ID或名称>
 docker exec -it <容器ID或名称> /bin/bash
 ```
 # Dockerfile
+主要用途：定义如何构建一个Docker镜像
 ## Docker镜像的分层架构
 Dockerfile 中的每一行指令都会生成一个新的镜像层，Docker 会缓存每一层，这意味着如果Dockerfile 没有更改，或者构建上下文没有变化，Docker 在后续构建时会复用这些缓存的层，这样可以加速构建过程。但如果某一层发生了变化（例如，RUN 命令中更改了文件或安装了新的依赖），后续所有层都必须重新构建。
 
@@ -216,9 +220,26 @@ Volumes are not a good choice if you need to access the files from the host, as 
 
 Docker 支持多种 **Volume Driver**，允许用户将容器数据存储到不同存储后端（local, NFS, tmpfs）
 
-# Docker Compose
+### Volume的备份与恢复
+Docker Volume无法直接做到备份、迁移、恢复，但可以借助宿主机文件系统进行中转，大致步骤如下：
+1. 进入容器A内部，将Volume里的文件拷贝到宿主机本地
+2. 在宿主机本地进行文件备份、迁移
+3. 进入容器B内部，将迁移后的本地文件拷贝到Volume内
+```shell
+# 将 /data 目录（即 volume 的内容）压缩成 backup.tar 文件，并保存到宿主机的当前目录
+docker run --rm -v my_volume:/data -v $(pwd):/backup ubuntu tar cvf /backup/backup.tar /data
 
-- Docker Compose 会自动创建一个自定义的bridge网络，并将所有定义在 Compose 文件中的服务容器都连接到这个网络中，这使得容器之间可以通过容器名互相访问
+scp backup.tar user@remote_host:/destination
+
+docker volume create my_new_volume
+# 解压 backup.tar 到容器内的 /data 目录，即新的volume中
+docker run --rm -v my_new_volume:/data -v /destination:/backup ubuntu tar xvf /backup/backup.tar -C /data
+```
+
+# Docker Compose
+主要用途：定义如何运行多个容器，可以理解为运行一个App Stack
+
+- Docker Compose 会自动创建一个自定义的bridge网络，并将所有定义在 Compose 文件中的服务容器都连接到这个网络中，这使得容器之间**可以通过容器名互相访问**
 - 如果多次执行同一 Docker Compose 文件但Compose定义并未修改，则容器状态不会发生变化且不会被重复创建；若Compose定义已经发生了修改，则再次运行Docker Compose时容器也会进行相应更新并重启
 
 ## Demo
@@ -273,11 +294,19 @@ services:
 # 默认查找并使用当前目录的docker-compose.yml or docker-compose.yaml or compose.yml文件
 # --build 强制重新构建镜像  -d 容器后台运行
 docker compose up -d --build
+# 查看日志
+docker compose logs -f [service]
+# 停止容器
+docker compose stop
+# 停止并删除容器、网络
+docker compose down
+# 停止并删除容器、网络、存储卷
+docker compose down --volume
 ```
 ![](attachments/Pasted%20image%2020250217235357.png)
 # Docker与Jenkins联动
 
-
+#todo 
 
 
 
