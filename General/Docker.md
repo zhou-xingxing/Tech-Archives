@@ -246,7 +246,7 @@ docker run --rm -v my_new_volume:/data -v /destination:/backup ubuntu tar xvf /b
 ### Nginx+Flask+Redis
 使用Nginx作为负载均衡器轮询后面两个Web应用，并使用Redis实现请求计数。
 
-[跳转到配套代码](./Docker使用_代码/nginx-flask-redis)
+[跳转到配套代码](./Docker_代码/nginx-flask-redis)
 
 **文件目录结构如下：**
 ```txt
