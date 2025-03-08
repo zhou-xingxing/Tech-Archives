@@ -41,6 +41,21 @@ kube-controller-manager通过WATCH机制（HTTP Long Polling）监听kube-apiser
 | Node Controller | Node | 发现 Node 失联，驱逐 Pod 并触发重新调度 |
 | Job Controller | Job | 监测任务完成情况，失败时重试 |
 | Endpoint Controller | Pod | 发现 Pod 被删除时，更新 Service 关联的 Endpoint |
-## 工作节点组件
 
+## 工作节点组件
+### kubelet
+- 运行在k8s集群所有节点上（包括Master Node，因为控制面组件也是以容器形态运行的），以守护进程的方式存在
+- 负责接收调度指令创建和管理Pod，通过容器运行时来管理Pod里的容器以及监控容器状态
+
+**Pod 创建流程**
+1. kubelet 监听 kube-apiserver，发现有新的 Pod 调度到当前节点。
+2. kubelet 解析 PodSpec，并通过 CRI（gRPC API）请求容器运行时（如 containerd）。
+3. CRI 创建 Pod Sandbox，分配 IP，为 Pod 内容器创建共享网络环境。
+4. CRI 创建容器，拉取镜像、挂载存储、执行容器进程。
+5. kubelet 监控 Pod 和容器状态，并定期向 kube-apiserver 上报。
+
+> 关于Pod、Pod Sandbox、容器
+> - Pod是 Kubernetes 的逻辑单元，包含一个 Pod Sandbox 和多个容器。
+> - Pod Sandbox 是容器运行时创建的基础设施，用于为 Pod 中的 容器 提供共享环境。
+> - 容器 是运行应用进程的实体。
 
