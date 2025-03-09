@@ -116,6 +116,12 @@ docker run [参数] <镜像名>
 
 # 查看指定容器日志 -f代表follow 滚动更新
 docker logs -f <container_name_or_id>
+
+# 重启容器，此种方式可保留容器内被手动修改的可写层
+docker restart <container_name_or_id>
+
+# 强制删除容器，否则需要先停止容器才能删除
+docker rm -f <container_name_or_id>
 ```
 核心参数：
 - `-d`: 后台运行（detached mode）
