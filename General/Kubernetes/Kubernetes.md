@@ -77,7 +77,14 @@ kube-controller-manager通过WATCH机制（HTTP Long Polling）监听kube-apiser
 - kube-proxy 是 k8s 网络代理组件，运行在每个 Node 上，负责维护网络规则，使集群内的 Pod 之间能够通过 Service 进行通信
 - 一般情况下kube-proxy是必须的，不过也有使用其他网络插件的替代方案
 
+## 客户端工具
+### kubectl
+安装方式可参考：https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
 
-
+安装 kubectl 后，它默认会寻找 ~/.kube/config 并使用该配置连接 Kubernetes 集群
+```shell
+# 验证
+kubectl cluster-info
+```
 
 
