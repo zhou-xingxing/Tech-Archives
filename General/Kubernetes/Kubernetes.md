@@ -85,6 +85,24 @@ kube-controller-manager通过WATCH机制（HTTP Long Polling）监听kube-apiser
 ```shell
 # 验证
 kubectl cluster-info
+
+# 基本使用格式，-A所有命名空间
+kubectl <动作：get|create|delete> <资源类型：pod|deployment|node|service> <资源名> -A
+
+# 启动一个代理服务，允许在本地访问 kube-apiserver，自动使用本机kubectl认证信息，适用于本地调试kube-apiserver
+kubectl proxy
 ```
 
-
+# 基本概念
+## Pod
+- k8s调度的基本单位，是一组紧密耦合的容器（一般是一个业务应用容器+监控、日志采集容器），Pod中的容器共享IP地址、存储卷、主机名等，这意味着相同Pod内的容器可以直接使用localhost:<端口>彼此访问
+- 注意Pod中不同容器的文件系统还是互相隔离的，只不过可以挂载共享存储
+![](attachments/Pasted%20image%2020250310234550.png)
+常用命令
+```shell
+kubectl get pod <pod_name>
+kubectl describe pod <pod_name>
+kubectl logs [-f] <pod_name>
+# 在容器上执行命令，这里是启动一个bash会话
+kubectl exec -it <pod_name> -- bash
+```
