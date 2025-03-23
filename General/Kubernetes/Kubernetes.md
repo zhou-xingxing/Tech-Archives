@@ -79,15 +79,15 @@ kube-controller-manager通过WATCH机制（HTTP Long Polling）监听kube-apiser
 
 ## 客户端工具
 ### kubectl
-安装方式可参考：https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
+安装方式可参考： https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
 
 安装 kubectl 后，它默认会寻找 ~/.kube/config 并使用该配置连接 Kubernetes 集群
 ```shell
 # 验证
 kubectl cluster-info
 
-# 基本使用格式，-A所有命名空间
-kubectl <动作：get|create|delete> <资源类型：pod|deployment|node|service> <资源名> -A
+# 基本使用格式，-A所有命名空间，-o wide输出更多详细信息
+kubectl <动作：get|create|delete> <资源类型：pod|deployment|node|service> <资源名> [-A] [-o wide] 
 
 # 启动一个代理服务，允许在本地访问 kube-apiserver，自动使用本机kubectl认证信息，适用于本地调试kube-apiserver
 kubectl proxy
@@ -106,3 +106,35 @@ kubectl logs [-f] <pod_name>
 # 在容器上执行命令，这里是启动一个bash会话
 kubectl exec -it <pod_name> -- bash
 ```
+## Service
+每个Pod都有自己的IP，这个IP可能来自CNI（k8s网络插件）创建的虚拟网络中的IP，也可能直接使用Node IP（如果Pod配置了hostNetwork: true）。
+
+Pod之间可以通过Pod IP直接访问，前提是网络策略运行。但问题在于Pod是不稳定的，可能会随着扩缩容被删除或新建，此时Pod IP也有可能随之改变，因此最佳实践是永远不要直接依赖Pod IP去实现服务间通信。
+
+Service的作用是为一组动态变化的 Pod 提供稳定的访问入口和负载均衡，使得客户端无需感知后端Pod的IP变化。
+
+Service有四种类型：
+
+| 类型           | 作用                                             | 适用场景            |
+| ------------ | ---------------------------------------------- | --------------- |
+| ClusterIP    | Service默认类型，仅在集群内部提供访问                         | 内部通信            |
+| NodePort     | 通过每个 Node 的 IP 和固定端口暴露 Service，适用于集群外访问        | 简单外部访问          |
+| LoadBalancer | 依赖云服务商（AWS、GCP、Azure）的负载均衡器暴露 Service，适用于集群外访问 | 生产环境+云负载均衡      |
+| ExternalName | 将 Service 映射到外部域名，如 mydb.example.com           | Pod访问集群外的服务或API |
+> 关于ClusterIP 
+- 是 ​Service 资源分配的虚拟 IP（VIP），仅在集群内部可达
+- 特性：
+	-  ​稳定性：Service 创建后，ClusterIP 在生命周期内固定不变（除非删除重建）
+	- ​负载均衡：流量通过 ClusterIP 访问时，会被自动分发到后端多个 Pod
+
+> 关于ExternalName
+
+主要用于 K8s 集群内部的 Pod 访问集群外部的服务，Pod访问 ExternalName 类型的 Service 时，K8s 直接返回外部服务的域名，本质上ExternalName就是一个DNS别名（CNAME解析）。典型应用场景包括：
+- 访问云厂商提供的数据库或 API（如 AWS RDS）
+- 集群内部服务需要访问企业内部 DNS 解析的服务
+
+**为什么使用ExternalName访问外部服务，而不是直接使用外部服务的域名？**
+- 防止因外部服务域名发生变化而导致必须修改代码
+- 使Pod可以以同样的 Service 方式访问 K8s 内外部服务，统一架构
+- 便于未来可能的服务迁移，如外部服务迁移到K8s内部，此时只需要把Service类型从ExternalName改为ClusterIP即可
+- 可以使用**Istio、Envoy**等流量管理功能，为外部服务添加一层额外的保护

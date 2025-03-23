@@ -7,7 +7,7 @@ minikube最常见的是以Docker方式启动k8s集群，此时其会先拉取 KI
 # 虽然这个镜像地址能公开访问，但阿里云的docker镜像源本身是不对外开放的
 docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/kicbase:v0.0.46
 
-# 由于本人在做实验时用的是腾讯云服务器，所以这里填的是腾讯云的镜像源地址
+# 由于本人在做实验时用的是腾讯云服务器，所以这里填的是腾讯云的docker镜像源地址
 minikube start --force --base-image='registry.cn-hangzhou.aliyuncs.com/google_containers/kicbase:v0.0.46' --docker-opt registry-mirror=https://mirror.ccs.tencentyun.com
 ```
 使用kubectl查看k8s集群所有命名空间里的资源

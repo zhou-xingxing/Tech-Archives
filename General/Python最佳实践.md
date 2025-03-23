@@ -53,7 +53,7 @@ export PYTHON_BUILD_MIRROR_URL="https://mirrors.huaweicloud.com/python"
     - ​独立 `site-packages` 目录：存放项目安装的第三方包，与全局环境隔离
     - ​独立环境变量：如 `PYTHONPATH`、`PATH`
     - ​独立配置文件：如 `pyvenv.cfg` 定义环境行为（如是否继承全局包）
-	 - 生成一个激活脚本
+	 - 生成一个环境激活脚本
 	
 ```shell
 # 创建一个新的虚拟环境
@@ -93,7 +93,9 @@ uv init <project>
 # 运行脚本或命令
 uv run <py script or command>
 # 安装Python依赖
-uv add <package>
+uv add <package> --index=https://pypi.tuna.tsinghua.edu.cn/simple
+# 设置默认pypi镜像源
+export UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple
 # 删除Python依赖
 uv remove <package>
 # 升级Python依赖
