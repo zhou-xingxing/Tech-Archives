@@ -96,4 +96,4 @@ PrevLogTerm  = term of the log at PrevLogIndex
 # 集群成员变化
 本质问题就是研究如何在不中断集群服务的前提下，避免在增删节点期间同时出现两个及以上 Leader。
 
-# 日志压缩
+# 快照和日志压缩
