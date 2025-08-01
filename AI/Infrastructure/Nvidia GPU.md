@@ -144,4 +144,5 @@ MIG将一块物理GPU划分成多个彼此完全隔离的小GPU实例，每个�
 # 容器中使用GPU
 
 k8s+vGPU
+
 k8s+MIG
