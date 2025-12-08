@@ -1,3 +1,36 @@
+# Python虚拟环境
+虚拟环境的本质是 ​**创建一个轻量级的隔离目录**，其核心原理是：
+1. ​**共享基础解释器**：  
+    虚拟环境中的 `python` 可执行文件通常是 ​**符号链接**​（或硬链接）指向系统安装的某个 Python 解释器。
+    - 例如，`.venv/bin/python` → `/usr/bin/python3.11`（Linux/macOS）
+    - 因此，虚拟环境本身不复制完整的 Python 解释器代码，节省磁盘空间
+2. ​**隔离依赖与配置**：
+    - ​独立 `site-packages` 目录：存放项目安装的第三方包，与全局环境隔离
+    - ​独立环境变量：如 `PYTHONPATH`、`PATH`
+    - ​独立配置文件：如 `pyvenv.cfg` 定义环境行为（如是否继承全局包）
+	 - 生成一个环境激活脚本
+	
+```shell
+# 创建一个新的虚拟环境
+python3 -m venv <虚拟环境名>
+# 激活虚拟环境
+source venv/bin/activate
+# 退出虚拟环境
+deactivate
+# 查看当前使用的 Python 解释器路径，若虚拟环境正常激活则路径应位于venv/bin下
+which python
+# 列出已安装的 Python 包
+pip list
+# 将已安装的包及其版本号导出到 requirements.txt 文件
+pip freeze > requirements.txt
+# 从 requirements.txt 文件安装所有包
+pip install -r requirements.txt
+# 将requirements.txt里的包下载到本地指定目录
+pip download -r requirements.txt -d ./packages
+# 根据requirements.txt从本地目录安装包
+pip install --no-index --find-links=./packages -r requirements.txt
+```
+
 # Python多版本管理
 安装不同版本的 Python 本质上是 ​**下载并安装对应版本的 Python 解释器**。每个版本的 Python 解释器包含：
 - ​**核心运行时**：执行 Python 代码的二进制文件（如 `python3.8`、`python3.11`）。
@@ -43,38 +76,7 @@ export PYTHON_BUILD_MIRROR_URL_SKIP_CHECKSUM=1
 export PYTHON_BUILD_MIRROR_URL="https://mirrors.huaweicloud.com/python"
 
 ```
-# Python虚拟环境
-虚拟环境的本质是 ​**创建一个轻量级的隔离目录**，其核心原理是：
-1. ​**共享基础解释器**：  
-    虚拟环境中的 `python` 可执行文件通常是 ​**符号链接**​（或硬链接）指向系统安装的某个 Python 解释器。
-    - 例如，`.venv/bin/python` → `/usr/bin/python3.11`（Linux/macOS）
-    - 因此，虚拟环境本身不复制完整的 Python 解释器代码，节省磁盘空间
-2. ​**隔离依赖与配置**：
-    - ​独立 `site-packages` 目录：存放项目安装的第三方包，与全局环境隔离
-    - ​独立环境变量：如 `PYTHONPATH`、`PATH`
-    - ​独立配置文件：如 `pyvenv.cfg` 定义环境行为（如是否继承全局包）
-	 - 生成一个环境激活脚本
-	
-```shell
-# 创建一个新的虚拟环境
-python3 -m venv <虚拟环境名>
-# 激活虚拟环境
-source venv/bin/activate
-# 退出虚拟环境
-deactivate
-# 查看当前使用的 Python 解释器路径，若虚拟环境正常激活则路径应位于venv/bin下
-which python
-# 列出已安装的 Python 包
-pip list
-# 将已安装的包及其版本号导出到 requirements.txt 文件
-pip freeze > requirements.txt
-# 从 requirements.txt 文件安装所有包
-pip install -r requirements.txt
-# 将requirements.txt里的包下载到本地指定目录
-pip download -r requirements.txt -d ./packages
-# 根据requirements.txt从本地目录安装包
-pip install --no-index --find-links=./packages -r requirements.txt
-```
+
 # Python快速搭建文件服务器
 ```shell
 # 将当前目录作为文件服务器并指定端口
@@ -83,7 +85,18 @@ python -m http.server <port>
 # 客户端获取指定文件
 wget http:x.x.x.x:<port>/<文件路径>
 ```
-# uv
+# Python快速搭建文件服务器（可浏览器访问）
+```shell
+python3 -m venv ~/uploadenv
+cd ~/uploadenv
+source ~/uploadenv/bin/activate
+pip install uploadserver
+
+python3 -m uploadserver 8000
+```
+另一台主机即可直接使用浏览器访问：http://ip:8000 实现文件上传下载。
+
+# Python包管理工具-uv
 使用Rust编写的Python项目和包管理工具，号称速度极快
 https://docs.astral.sh/uv/
 ## 项目管理
