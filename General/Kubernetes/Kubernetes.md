@@ -161,11 +161,77 @@ kubectl exec -it <pod_name> -- bash
 ```
 ## Namespace
 
-- 一种逻辑隔离机制，将同一物理集群划分为相互隔离的组
+- 一种逻辑隔离机制，将一个物理集群划分为相互隔离的组
 - 允许不同项目、不同环境共用一个物理集群且互不干扰
 - 同一命名空间中的资源名称（仅针对作用域是命名空间级的资源）需唯一，不同命名空间的资源则无此要求
+- 命名空间可设定资源配额，实现不同租户的资源用量管控
+
+k8s集群在启动后，会默认创建4个命名空间
+
+```
+dafault: 用户未指定命名空间时，资源默认创建在此。
+kube-system: k8s的系统组件所在的命名空间。
+kube-public: 全局可读的命名空间，通常包含集群信息ConfigMap（如cluster-info），用于引导节点加入集群。
+kube-node-lease: 每个Node对应一个Lease对象，kubelet每秒更新一次Lease，控制平面通过Lease判断节点是否失联。
+```
+
+## Label
+
+允许用户给k8s资源对象添加自定义标识（以键值对形式），可以在创建对象时添加，后续也可随时修改或删除。
+
+k8s支持2种标签选择算符：基于等值的和基于集合的
+
+### 基于等值的
+
+```
+environment = production
+tier != frontend
+```
+
+- 第一个筛选带有environment标签且值为production的资源
+- 第二个筛选带有tier标签且值不为frontend的，**以及不带有trie标签**的资源
+
+### 基于集合的
+
+```
+environment in (production, qa)
+tier notin (frontend, backend)
+partition
+!partition
+```
+
+- 第一个筛选带有environment标签且值为production或qa的资源
+- 第二个筛选带有tier标签且值不为frontend或backend的，**以及不带有trie标签**的资源
+- 第三个筛选带有partition标签的资源，值任意
+- 第四个筛选不带有partition标签的资源
+
+如果明确希望筛选带有tier标签且值不为frontend或backend的，需使用
+
+```
+tier!=frontend,tier
+```
+
+## 工作负载
+
+ 
+
+
+
+
 
 # 网络模型
+
+Kubernetes 对网络有以下强制性要求（无论使用 Flannel、Calico、Cilium 等 CNI 插件）：
+
+“All containers can communicate with all other containers without NAT.”
+
+“All nodes can communicate with all containers (and vice versa) without NAT.”
+
+这意味着：
+
+任意 Pod ↔ Pod（无论是否同节点）可以直接通信；
+任意 Node ↔ Pod（包括 Master 和 Worker）可以直接通信；
+所有通信都使用 真实 IP（无 NAT）。
 
 ## 不使用Service
 
@@ -246,7 +312,7 @@ Service有四种类型：
 
 
 
-# 客户端工具
+# K8s使用
 
 ## kubectl
 
@@ -264,3 +330,14 @@ kubectl <动作：get|create|delete|patch> <资源类型：pod|deployment|node|s
 # 启动一个代理服务，允许在本地访问 kube-apiserver，自动使用本机kubectl认证信息，适用于本地调试kube-apiserver
 kubectl proxy
 ```
+
+## metadata VS spec
+
+> **metadata 是“控制面用来管理对象的字段”，spec 是“数据面用来运行对象的字段”**
+
+```
+metadata: 你是谁，对象的“身份信息”
+spec: 你要怎么工作，对象的“期望状态 / 行为”
+```
+
+所以，Pod 的标签（labels）属于 Pod 的 metadata，而Deployment 的标签选择器（selector）属于 Deployment 的 spec。
