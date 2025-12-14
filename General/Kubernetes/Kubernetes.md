@@ -150,7 +150,8 @@ Kubelet → API Server（更新 Pod 状态）
 - k8s调度的基本单位，是一组紧密耦合的容器（一般是一个业务应用容器+监控/日志采集容器），**Pod中的容器共享IP地址、存储卷、主机名等**，这意味着相同Pod内的容器可以直接使用`localhost:<端口>`彼此访问
 - 共享资源的容器组，可以看成一个逻辑主机
 - 注意Pod中不同容器的文件系统还是互相隔离的，只不过可以挂载共享存储
-![](attachments/Pasted%20image%2020250310234550.png)
+- 每个Pod里都有一个pause根容器，它负责承载 Pod 级别的 Linux Namespace（尤其是网络），让 Pod 内的所有业务容器能够共享同一个运行环境
+- ![](attachments/Pasted%20image%2020250310234550.png)
 常用命令
 ```shell
 kubectl get pod <pod_name>
@@ -159,6 +160,16 @@ kubectl logs [-f] <pod_name>
 # 在容器上执行命令，这里是启动一个bash会话
 kubectl exec -it <pod_name> -- bash
 ```
+### Pod生命周期
+
+> **Kubernetes 把 Pod 当成“资源共享单元”，但把容器当成“失败与重启的最小单元”。**
+
+在同一个 Pod 里，一个容器启动失败只会重启这个容器本身，不会影响到Pod内其他容器。容器启动失败不等于Pod需要被重建。Init container 失败是个例外，它失败会阻塞整个Pod，其他容器均不会启动。
+
+#### 容器探针
+
+
+
 ## Namespace
 
 - 一种逻辑隔离机制，将一个物理集群划分为相互隔离的组
@@ -215,7 +226,7 @@ tier!=frontend,tier
 
  
 
-
+ 
 
 
 
@@ -325,10 +336,13 @@ Service有四种类型：
 kubectl cluster-info
 
 # 基本使用格式，-A所有命名空间，-o wide输出更多详细信息，-o json以JSON格式输出信息，-n指定命名空间（只要不是default都需要显示指定）
-kubectl <动作：get|create|delete|patch> <资源类型：pod|deployment|node|service> <资源名> <flags: -A|-o wide|-o json|-n [namespace]>
+kubectl <动作：get|create|delete|patch|describe> <资源类型：pod|deployment|node|service> <资源名> <flags: -A|-o wide|-o json|-n [namespace]>
 
 # 启动一个代理服务，允许在本地访问 kube-apiserver，自动使用本机kubectl认证信息，适用于本地调试kube-apiserver
 kubectl proxy
+
+# 进入pod里的容器，如果只有一个容器可省略-c
+kubectl exec busybox-pod -c busybox -it -- sh
 ```
 
 ## metadata VS spec
@@ -341,3 +355,19 @@ spec: 你要怎么工作，对象的“期望状态 / 行为”
 ```
 
 所以，Pod 的标签（labels）属于 Pod 的 metadata，而Deployment 的标签选择器（selector）属于 Deployment 的 spec。
+
+## Pod YAML
+
+### 容器启动命令
+
+> [!IMPORTANT]
+>
+> 如果Pod YAML里只设置了command，那么Dockerfile里的ENTRYPOINT和CMD都会被覆盖（本人实际测试的结论）
+
+| Dockerfile                        | k8s Pod YAML                              | 最终执行命令                  |
+| --------------------------------- | ----------------------------------------- | ----------------------- |
+| `ENTRYPOINT ["ep"]` `CMD ["cmd"]` | 未设置 `command`/`args`                      | `["ep", "cmd"]`         |
+| `ENTRYPOINT ["ep"]` `CMD ["cmd"]` | 只设 `command: ["k8s-cmd"]`                 | `["k8s-cmd"]`           |
+| `ENTRYPOINT ["ep"]` `CMD ["cmd"]` | 只设 `args: ["k8s-arg"]`                    | `["ep", "k8s-arg"]`     |
+| `ENTRYPOINT ["ep"]` `CMD ["cmd"]` | `command: ["k8s-ep"]` `args: ["k8s-arg"]` | `["k8s-ep", "k8s-arg"]` |
+
