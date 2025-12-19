@@ -74,28 +74,6 @@ kube-controller-manager通过WATCH机制（HTTP Long Polling）监听kube-apiser
 - 一个分布式键值数据库，在k8s中用来存储集群所有配置信息和资源的状态数据
 - 具备强一致性，即任何时候读到的数据都是最新的且一致的。因此牺牲了一定程度的可用性，即写入数据可能会有延迟。适用于k8s这种对数据准确性要求极高的系统。
 
-### 工作流程举例
-
-以部署一个 Nginx的 ReplicaSet 为例
-
-```
-kubectl 
-   ↓ (1. POST)
-API Server → etcd（持久化 ReplicaSet）
-   ↓ (2. Watch)
-Controller Manager（ReplicaSet Controller）
-   ↓ (3. 创建 Pod)(POST)
-API Server → etcd（持久化 Pod）
-   ↓ (4. Watch)
-Scheduler（发现未调度 Pod）
-   ↓ (5. 绑定 Node)(PATCH)
-API Server → etcd（更新 Pod 的 nodeName）
-   ↓ (6. Watch)
-Kubelet（在目标节点上启动容器）
-   ↓ (7. 上报状态)(PATCH)
-Kubelet → API Server（更新 Pod 状态）
-```
-
 
 
 
@@ -148,11 +126,31 @@ Kubelet → API Server（更新 Pod 状态）
 ## Pod
 
 - k8s调度的基本单位，是一组紧密耦合的容器（一般是一个业务应用容器+监控/日志采集容器），**Pod中的容器共享IP地址、存储卷、主机名等**，这意味着相同Pod内的容器可以直接使用`localhost:<端口>`彼此访问
-- 共享资源的容器组，可以看成一个逻辑主机
+- 共享资源的容器组，可以看成一个**逻辑主机**
 - 注意Pod中不同容器的文件系统还是互相隔离的，只不过可以挂载共享存储
-- 每个Pod里都有一个pause根容器，它负责承载 Pod 级别的 Linux Namespace（尤其是网络），让 Pod 内的所有业务容器能够共享同一个运行环境
-- ![](attachments/Pasted%20image%2020250310234550.png)
+
+### Pod中容器的资源隔离程度
+
+> Pod 中的容器并不是每个都有“完整独立”的 Linux namespace；有些Linux namespace是Pod级共享的，有些是容器级独立的
+
+| Namespace 类型 | 是否共享（默认）     | 说明                                                       |
+| -------------- | -------------------- | ---------------------------------------------------------- |
+| Network        | ✅ 共享               | 所有容器共用一个网络栈（IP、端口等）                       |
+| UTS            | ✅ 共享               | 主机名一致                                                 |
+| IPC            | ✅ 共享               | 可通过 IPC 机制通信                                        |
+| PID            | ❌ 不共享（可选共享） | 默认各自有独立进程视图                                     |
+| Mount          | ❌ 不共享             | 每个容器有自己的文件系统挂载点（但可通过 volume 共享目录） |
+| User           | ❌ 通常不共享         | 各自的用户/组 ID 映射                                      |
+
+**Pod 是“网络/主机视角一致，进程/文件隔离”的折中模型**
+
+cgroups也是容器级的，所以Pod中的容器可以各自单独设置CPU和内存的使用配额。
+
+每个Pod里都有一个pause根容器，它负责承载 Pod 级别的 Linux Namespace（尤其是网络），让 Pod 内的所有业务容器能够共享同一个运行环境。
+
+![](attachments/Pasted%20image%2020250310234550.png)
 常用命令
+
 ```shell
 kubectl get pod <pod_name>
 kubectl describe pod <pod_name>
@@ -164,11 +162,60 @@ kubectl exec -it <pod_name> -- bash
 
 > **Kubernetes 把 Pod 当成“资源共享单元”，但把容器当成“失败与重启的最小单元”。**
 
-在同一个 Pod 里，一个容器启动失败只会重启这个容器本身，不会影响到Pod内其他容器。容器启动失败不等于Pod需要被重建。Init container 失败是个例外，它失败会阻塞整个Pod，其他容器均不会启动。
+#### Pod创建
+
+以部署一个Nginx的 ReplicaSet 为例
+
+```
+kubectl 
+   ↓ (1. POST)
+API Server → etcd（持久化 ReplicaSet）
+   ↓ (2. Watch)
+Controller Manager（ReplicaSet Controller）
+   ↓ (3. 创建 Pod)(POST)
+API Server → etcd（持久化 Pod）
+   ↓ (4. Watch)
+Scheduler（发现未调度 Pod）
+   ↓ (5. 绑定 Node)(PATCH)
+API Server → etcd（更新 Pod 的 nodeName）
+   ↓ (6. Watch)
+Kubelet（在目标节点上启动容器）
+   ↓ (7. 上报状态)(PATCH)
+Kubelet → API Server（更新 Pod 状态）
+```
+
+#### Pod启动
+
+在同一个 Pod 里，一个容器启动失败只会重启这个容器本身，不会影响到Pod内其他容器，容器启动失败不等于Pod需要被重建。
+
+Init container 失败是个例外，它失败会阻塞整个Pod，其他容器均不会启动。
+
+#### Pod终止
+
+
 
 #### 容器探针
 
+- livenessProbe
 
+用于探测容器是否处于运行状态，如果探测失败，kubelet会杀死容器，并根据该容器重启策略执行下一步动作。
+
+> 如果容器中的进程能够在遇到问题或不健康的情况下自行崩溃，则不一定需要存活态探针。
+>
+> Kubernetes（准确来说应该是容器运行时） 会持续监控 Pod 中每个容器的**主进程（PID 1）是否还在运行**：
+>
+> - 如果容器主进程非正常退出(exit code ≠ 0)→ Kubernetes 认为容器“失败”，根据重启策略决定下一步动作。
+> - 但如果容器主进程没有退出，但实质已无法正常工作了（卡住、资源耗尽），此时就需要使用存活探针。
+
+- readinessProbe
+
+用于探测容器是否已准备好接受请求，如果探测失败，则不会将该Pod加入Service，或将该Pod从已加入的Service中移除。
+
+只有当一个 Pod 中**所有容器的就绪探针都成功**，该 Pod 才会被标记为“就绪”（Ready），即有一个容器就绪探针失败，该Pod也不会加入Service。
+
+- startupProbe
+
+指示容器中的应用是否已经启动。如果提供了启动探针，则所有其他探针都会被 禁用，直到此探针成功为止。如果启动探测失败，kubelet将杀死容器， 而容器依其重启策略进行重启。
 
 ## Namespace
 
@@ -246,13 +293,14 @@ Kubernetes 对网络有以下强制性要求（无论使用 Flannel、Calico、C
 
 ## 不使用Service
 
-### 直接使用 Pod IP
+### 直接使用 Pod IP（默认）
 
-**Pod 有自己的 Pod IP，可以直接访问该 IP + 容器端口**
+**Pod 有自己的 Pod IP，可以直接访问该Pod IP + 容器端口（containerPort）**
 
 - Pod IP **不是固定**的（重建就变了）
 - 不同节点之间的路由要靠 CNI，否则不通
-- 从集群外部不能直接访问
+- 从集群外部不能直接访问，`Pod->Pod`或`Node->Pod`是可以的
+- 有些生产环境启用了额外的网络安全策略，可能不允许从Node访问Pod
 
 ### port-forward
 
@@ -335,8 +383,8 @@ Service有四种类型：
  # 验证
 kubectl cluster-info
 
-# 基本使用格式，-A所有命名空间，-o wide输出更多详细信息，-o json以JSON格式输出信息，-n指定命名空间（只要不是default都需要显示指定）
-kubectl <动作：get|create|delete|patch|describe> <资源类型：pod|deployment|node|service> <资源名> <flags: -A|-o wide|-o json|-n [namespace]>
+# 基本使用格式，-A所有命名空间，-o wide输出更多详细信息，-o json以JSON格式输出信息，-n指定命名空间（只要不是default都需要显示指定），-w持续监听模式
+kubectl <动作：get|create|delete|patch|describe> <资源类型：pod|deployment|node|service> <资源名> <flags: -A|-o wide|-o json|-n [namespace]|-w>
 
 # 启动一个代理服务，允许在本地访问 kube-apiserver，自动使用本机kubectl认证信息，适用于本地调试kube-apiserver
 kubectl proxy
@@ -370,4 +418,26 @@ spec: 你要怎么工作，对象的“期望状态 / 行为”
 | `ENTRYPOINT ["ep"]` `CMD ["cmd"]` | 只设 `command: ["k8s-cmd"]`                 | `["k8s-cmd"]`           |
 | `ENTRYPOINT ["ep"]` `CMD ["cmd"]` | 只设 `args: ["k8s-arg"]`                    | `["ep", "k8s-arg"]`     |
 | `ENTRYPOINT ["ep"]` `CMD ["cmd"]` | `command: ["k8s-ep"]` `args: ["k8s-arg"]` | `["k8s-ep", "k8s-arg"]` |
+
+### 容器使用资源限制
+
+limits: 限制容器能使用的最大资源
+
+requests: 容器启动所需要的最小资源，否则无法调度
+
+| 场景                               | 行为                                                       |
+| ---------------------------------- | ---------------------------------------------------------- |
+| **只设 `requests`，不设 `limits`** | `limits` 默认 = 节点可用资源上限（危险！可能耗尽节点资源） |
+| **只设 `limits`，不设 `requests`** | `requests` 自动 = `limits`（保守策略）                     |
+| **都不设**                         | 容器可无限制使用节点资源（**强烈不推荐**）                 |
+| **内存超限**（Gi、Mi、G、M）       | 容器被 OOMKilled（Exit Code 137）                          |
+| **CPU 超限**（整数小数均可）       | 容器被限流（throttled），但不会被杀                        |
+
+
+
+
+
+
+
+## Helm
 
