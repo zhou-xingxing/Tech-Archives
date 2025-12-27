@@ -192,15 +192,15 @@ Init container 失败是个例外，它失败会阻塞整个Pod，其他容器�
 
 #### Pod终止
 
-
+todo
 
 #### 容器探针
 
 - livenessProbe
 
-用于探测容器是否处于运行状态，如果探测失败，kubelet会杀死容器，并根据该容器重启策略执行下一步动作。
+用于探测容器是否处于存活（正常运行）状态，如果探测失败，kubelet会杀死容器，并根据该容器重启策略执行下一步动作。
 
-> 如果容器中的进程能够在遇到问题或不健康的情况下自行崩溃，则不一定需要存活态探针。
+> 如果容器中的进程能够在遇到问题或不健康的情况下自行崩溃，则不一定需要存活探针。
 >
 > Kubernetes（准确来说应该是容器运行时） 会持续监控 Pod 中每个容器的**主进程（PID 1）是否还在运行**：
 >
@@ -217,9 +217,164 @@ Init container 失败是个例外，它失败会阻塞整个Pod，其他容器�
 
 指示容器中的应用是否已经启动。如果提供了启动探针，则所有其他探针都会被 禁用，直到此探针成功为止。如果启动探测失败，kubelet将杀死容器， 而容器依其重启策略进行重启。
 
+### Pod调度
+
+默认情况下，Scheduler会为Pod计算出最合适节点。
+
+#### nodeName
+
+将Pod调度到指定名字的Node上。
+
+#### nodeSelector
+
+将Pod调度到具有指定标签的Node上。
+
+#### 亲和性调度
+
+亲和性功能由两种类型的亲和性组成：
+
+1. 节点亲和性`nodeAffinity`功能类似于 `nodeSelector` ，但它的表达能力更强，并且允许你指定软规则。
+
+**requiredDuringSchedulingIgnoredDuringExecution**
+
+必须满足的调度条件，且如果条件在Pod已经调度后不满足了，Pod仍将继续运行。
+
+**preferredDuringSchedulingIgnoredDuringExecution**
+
+尽量满足的调度条件，如果找不到合适的节点，Scheduler仍会调度该Pod。如果条件在Pod已经调度后不满足了，Pod仍将继续运行。
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: with-node-affinity
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: topology.kubernetes.io/zone
+            operator: In
+            values:
+            - antarctica-east1
+            - antarctica-west1
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 1
+        preference:
+          matchExpressions:
+          - key: another-node-label-key
+            operator: In
+            values:
+            - another-node-label-value
+  containers:
+  - name: with-node-affinity
+    image: registry.k8s.io/pause:2.0
+```
+
+>如果你在与 nodeAffinity 类型关联的 nodeSelectorTerms 中指定多个条件， 只要其中一个 `nodeSelectorTerms` 满足（各个条件按逻辑或操作组合）的话， Pod 就可以被调度到节点上。
+
+> 如果你在与 `nodeSelectorTerms` 中的条件相关联的单个 `matchExpressions` 字段中指定多个表达式， 则只有当所有表达式都满足（各表达式按逻辑与操作组合）时，Pod 才能被调度到节点上。
+
+2. Pod 亲和性`podAffinity`和反亲和性`podAntiAffinity`允许你根据其他 Pod 的标签来约束 Pod，其语义为：如果 X 上已经运行了一个或多个满足规则 Y 的 Pod， 则这个 Pod 应该（或者在反亲和性的情况下不应该）运行在 X 上。 这里的 X 可以是节点、机架、云提供商可用区或地理区域或类似的拓扑域， Y 则是 Kubernetes 尝试满足的规则。
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: with-pod-affinity
+spec:
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: security
+            operator: In
+            values:
+            - S1
+        topologyKey: topology.kubernetes.io/zone
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: security
+              operator: In
+              values:
+              - S2
+          topologyKey: topology.kubernetes.io/zone
+  containers:
+  - name: with-pod-affinity
+    image: registry.k8s.io/pause:2.0
+```
+
+topologyKey的常见值有：**（topologyKey支持自定义）**
+
+- kubernetes.io/hostname 节点级
+- topology.kubernetes.io/zone 可用区级
+- topology.kubernetes.io/region region级
+
+#### 污点与容忍度
+
+污点Taint作用于节点，容忍度Toleration作用于Pod。污点和容忍度相互配合，可以避免 Pod 被分配到不合适的节点上。
+
+**污点**
+
+```shell
+# 给node1打污点
+kubectl taint nodes node1 key1=value1:NoSchedule
+# 给node1去除污点
+kubectl taint nodes node1 key1=value1:NoSchedule-
+```
+
+PreferNoSchedule: 尽量不调度。
+
+NoSchedule: 明确不调度。
+
+NoExecute: 明确不调度且驱逐现在节点上已有的不具备容忍度的Pod。
+
+控制平面会根据节点状况自动添加污点（如 `not-ready`、`unreachable`）
+
+**容忍度**
+
+以下例子说明：该Pod可以被调度到打了`dedicated=gpu:NoExecute`污点的Node上
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-pod
+spec:
+  containers:
+    - name: cuda-app
+      image: nvidia/cuda:12.0-base
+      command: ["sleep", "3600"]
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal" ## 可以是Equal或者Exists
+      value: "gpu"
+      effect: "NoExecute"
+      tolerationSeconds: 300  ## 仅 NoExecute 生效，5分钟后再被驱逐
+```
+
+特殊情况：
+
+- 如果 `key` 为空且为 `Exists`，则匹配所有污点
+
+- 如果 `effect` 为空，则匹配指定 `key` 的所有效果
+- 如果Pod设置了`tolerationSeconds`，则允许Pod运行一段时间后再驱逐，如果没设置`tolerationSeconds`则Pod可以一直在该节点上运行
+
+#### 如何实现Pod独占节点
+
+1. 给节点加`Taint`：确保其他Pod不会调度到该节点上。
+2. 给Pod加`Toleartion`：使Pod能被允许被调度到该节点上。
+3. 给Pod加`nodeSelector`或`nodeAffinity`：使Pod定向调度到该节点上。
+
 ## Namespace
 
-- 一种逻辑隔离机制，将一个物理集群划分为相互隔离的组
+- 一种逻辑隔离机制，将一个物理集群划分为资源名称、权限、配额相互隔离的组
 - 允许不同项目、不同环境共用一个物理集群且互不干扰
 - 同一命名空间中的资源名称（仅针对作用域是命名空间级的资源）需唯一，不同命名空间的资源则无此要求
 - 命名空间可设定资源配额，实现不同租户的资源用量管控
@@ -232,6 +387,8 @@ kube-system: k8s的系统组件所在的命名空间。
 kube-public: 全局可读的命名空间，通常包含集群信息ConfigMap（如cluster-info），用于引导节点加入集群。
 kube-node-lease: 每个Node对应一个Lease对象，kubelet每秒更新一次Lease，控制平面通过Lease判断节点是否失联。
 ```
+
+- 注意！k8s namespace**默认不隔离网络**，根据k8s的网络模型，Pod跨Namespace天然可通信，网络隔离靠**NetworkPolicy + 支持的 CNI**
 
 ## Label
 
