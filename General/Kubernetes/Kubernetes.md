@@ -462,11 +462,23 @@ spec:
 - `maxUnavaliable: 1 + maxSurge: 0` 先删一个旧Pod，再创建一个新Pod，适用于k8s集群计算资源紧张的场景
 - `maxUnavaliable: 0 + maxSurge: 1` 先创建一个新Pod并等待其可用，再删除一个旧Pod，适用于完全不想使整个Service可承载流量受损的场景
 
-
-
 **版本回滚**，维护了一定数量的历史版本（本质是旧的RS），以便能将 Pod 回滚到某一历史版本
 
- 
+```shell 
+# 将deployment回滚到上个版本
+kubectl rollout undo deployment/xxx
+# 将deployment回滚到指定版本
+kubectl rollout undo daemonset/abc --to-revision=3
+# 试回滚
+kubectl rollout undo --dry-run=server deployment/abc
+
+# 列举历史版本
+kubectl rollout history deployment/xxx
+# 查看指定历史版本的详细信息
+kubectl rollout history daemonset/abc --revision=3
+```
+
+
 
 
 
