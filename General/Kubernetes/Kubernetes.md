@@ -428,7 +428,43 @@ tier!=frontend,tier
 
 ## 工作负载
 
- 
+### ReplicaSet
+确保在任何给定的时间内，集群运行着指定数量的 Pod 副本。
+
+注意：RS 只负责数量，不负责“配置”。
+
+- 即使修改了yaml，当RS发现Pod数量没发生变化时，也不会重新配置Pod，除非用户手动删除了Pod，RS才会根据修改后的yaml（比如新镜像）重新启动一个Pod。
+- 如果修改了yaml中的副本数量，RS会立即触发扩缩容。
+
+ ⚠️ 一个非常关键的陷阱：
+
+**如果这个 RS 是由 Deployment 创建的，不能直接修改 RS 的数量或镜像版本！因为Deployment发现RS的配置信息和自己不一致，会立刻将RS改回来**
+
+### Deployment
+
+通过管理 ReplicaSet 来间接管理 Pod，并实现以下功能：
+
+**滚动更新**，在 Pod 版本更新时，Deployment 会创建新的 RS 并逐渐缩减旧的 RS 规模
+
+```yaml
+spec:
+  strategy:
+    type: RollingUpdate # RollingUpdate 滚动更新 or Recreate 直接重建
+    rollingUpdate:
+      # 这两个参数不能同时为0
+      maxUnavailable: 1 # 滚动更新过程中，最多允许不可用的Pod数，可以是百分比（向下取整）
+      maxSurge: 1 # 滚动更新过程中，最多允许额外创建的Pod数，可以是百分比（向上取整）
+```
+
+注意点：
+
+- k8s只有在Pod就绪探针**readinessProbe**探测成功后才认为Pod可用，如果没有就绪探针，则Pod启动后就认为可用
+- `maxUnavaliable: 1 + maxSurge: 0` 先删一个旧Pod，再创建一个新Pod，适用于k8s集群计算资源紧张的场景
+- `maxUnavaliable: 0 + maxSurge: 1` 先创建一个新Pod并等待其可用，再删除一个旧Pod，适用于完全不想使整个Service可承载流量受损的场景
+
+
+
+**版本回滚**，维护了一定数量的历史版本（本质是旧的RS），以便能将 Pod 回滚到某一历史版本
 
  
 
@@ -548,6 +584,12 @@ kubectl proxy
 
 # 进入pod里的容器，如果只有一个容器可省略-c
 kubectl exec busybox-pod -c busybox -it -- sh
+
+# 试运行，检查YAML文件
+kubectl apply -f xxx.yaml --dry-run=client|server
+
+# 对比本次更新的配置项
+kubectl diff -f xxx.yaml
 ```
 
 ## metadata VS spec
