@@ -1,10 +1,11 @@
 ---
 title: 你的前端代码，AI 能读懂吗？
+slug: can-ai-understand-your-frontend-code
 ---
-
-> [!NOTE]
+# 你的前端代码，AI 能读懂吗？
+> [!TIP]
 >
-> *<small>本文约 1500 字，预估阅读时间 8 分钟。</small>*
+> *<small>本文约 1681 字，预估阅读时间 约 8 分钟。</small>*
 
 > 在传统 Web 时代，网页是给"人"看的；
 >
