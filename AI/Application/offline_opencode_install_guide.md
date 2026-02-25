@@ -50,7 +50,6 @@ curl -L https://opencode.ai/install -o install_opencode.sh
 ### 解压二进制包
 
 ```bash
-```bash
 mkdir -p opencode_extracted
 tar -xzf opencode-linux-x64.tar.gz -C opencode_extracted/
 ```
